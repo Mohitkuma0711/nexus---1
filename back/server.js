@@ -506,7 +506,7 @@ app.get('*', (req, res) => {
 
 // ── Start ──────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '127.0.0.1';
+const HOST = process.env.HOST || '0.0.0.0';
 app.listen(PORT, HOST, () => {
     console.log(`\n🚀 NexusAI server running → http://${HOST}:${PORT}\n`);
     console.log('Provider status:');
@@ -515,3 +515,6 @@ app.listen(PORT, HOST, () => {
     console.log(`  Groq   : ${process.env.GROQ_API_KEY ? '✅ Key set' : '❌ Missing GROQ_API_KEY'}`);
     console.log('');
 });
+
+// Export the Express API for Vercel Serverless
+export default app;
