@@ -6,6 +6,7 @@ import OpenAI from 'openai';
 import Groq from 'groq-sdk';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import admin from 'firebase-admin';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -15,6 +16,23 @@ const FRONT_DIR = join(__dirname, '..', 'front');
 const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '' });
+
+// ── Initialise Firebase Admin ──────────────────────────────────────
+let db = null;
+if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    try {
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+        db = admin.firestore();
+        console.log('✅ Firebase initialized successfully.');
+    } catch (err) {
+        console.error('❌ Firebase initialization failed:', err.message);
+    }
+} else {
+    console.warn('⚠️ No FIREBASE_SERVICE_ACCOUNT_KEY found. Database logging is disabled.');
+}
 
 // ── System prompts per mode ────────────────────────────────────────
 const MODES = {
@@ -431,7 +449,7 @@ app.get('/api/health', async (req, res) => {
 // Main chat endpoint
 app.post('/api/chat', async (req, res) => {
     try {
-        const { modeId, message, history = [] } = req.body;
+        const { modeId, message, history = [], username = 'Anonymous' } = req.body;
 
         if (!modeId || !message) {
             return res.status(400).json({ error: 'modeId and message are required.' });
@@ -476,6 +494,18 @@ app.post('/api/chat', async (req, res) => {
             }
 
             if (lastFallbackErr) throw lastFallbackErr;
+        }
+
+        // Asynchronously log to Firebase if enabled
+        if (db) {
+            db.collection('conversations').add({
+                username,
+                mode: modeId,
+                modelUsed,
+                userMessage: message,
+                aiResponse: reply,
+                timestamp: admin.firestore.FieldValue.serverTimestamp()
+            }).catch(dbErr => console.error('Firebase log failed:', dbErr));
         }
 
         res.json({ reply, provider: providerUsed, model: modelUsed });

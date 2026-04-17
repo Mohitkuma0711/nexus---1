@@ -324,7 +324,8 @@ async function sendMessage() {
             body: JSON.stringify({
                 modeId: currentMode.id,
                 message: text,
-                history: chatHistory.slice(0, -1) // send history without the current message
+                history: chatHistory.slice(0, -1), // send history without the current message
+                username: localStorage.getItem('nexus-username') || 'Anonymous'
             })
         });
 
