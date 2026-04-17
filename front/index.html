@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusAI - Multi-Domain Expert System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div class="dashboard">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h1 class="logo-text">Nexus<span>AI</span></h1>
+                </div>
+                
+                <nav class="sidebar-nav">
+                    <div class="nav-section">
+                        <p class="section-label">Specialized Modes</p>
+                        <div id="mode-sidebar-list" class="sidebar-modes">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="nav-section insights-section">
+                        <p class="section-label">Nexus Brain (Insights)</p>
+                        <div id="graph-insights" class="insights-panel">
+                            <div class="insight-item">
+                                <span class="insight-icon"><i class="fa-solid fa-microchip"></i></span>
+                                <span class="insight-label">God Nodes</span>
+                                <span class="insight-value">server.js, script.js</span>
+                            </div>
+                            <div class="insight-item">
+                                <span class="insight-icon"><i class="fa-solid fa-network-wired"></i></span>
+                                <span class="insight-label">Communities</span>
+                                <span class="insight-value">Active</span>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <button class="upgrade-btn-sidebar"><i class="fa-solid fa-star"></i> Get Plus</button>
+                    <div class="voice-selector">
+                        <label class="section-label" for="voice-select"><i class="fa-solid fa-volume-high"></i> AI Voice</label>
+                        <select id="voice-select">
+                            <option value="">Loading voices...</option>
+                        </select>
+                    </div>
+                    <div class="user-profile">
+                        <div class="avatar-sm">M</div>
+                        <span class="user-name">Mohit Kumar</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Chat View -->
+                <div id="chat-view" class="view active">
+                    <header class="chat-header">
+                        <div class="chat-header-info">
+                            <div id="chat-icon-container" class="icon-container">
+                                <i id="chat-icon" class="fa-solid fa-robot"></i>
+                            </div>
+                            <div>
+                                <h2 id="chat-title">Nexus AI</h2>
+                                <p id="chat-subtitle">How can I help you today?</p>
+                            </div>
+                        </div>
+                        <div class="header-actions">
+                            <button class="nav-icon"><i class="fa-solid fa-magnifying-glass"></i></button>
+                            <button class="nav-icon"><i class="fa-solid fa-share-nodes"></i></button>
+                        </div>
+                    </header>
+
+                    <div id="chat-messages" class="messages-container">
+                        <!-- Messages will appear here -->
+                        <div id="welcome-message-container">
+                            <div class="welcome-hero">
+                                <h1 class="main-greeting">How can I help, Mohit?</h1>
+                                <p class="welcome-sub">Selected mode: <span id="current-mode-name">Nexus AI</span></p>
+                                <div id="suggestion-grid" class="suggestion-grid">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-area">
+                        <div class="input-wrapper">
+                            <button class="input-icon-btn"><i class="fa-solid fa-plus"></i></button>
+                            <textarea id="message-input" placeholder="Ask anything" rows="1"></textarea>
+                            <button id="mic-btn" class="input-icon-btn" aria-label="Voice input"><i class="fa-solid fa-microphone"></i></button>
+                            <button id="read-aloud-btn" class="input-icon-btn" aria-label="Read aloud toggle" title="Toggle read aloud"><i class="fa-solid fa-volume-xmark"></i></button>
+                            <button id="stop-audio-btn" class="input-icon-btn" aria-label="Stop speaking" title="Stop AI speaking" style="display: none; color: #ef4444;"><i class="fa-solid fa-circle-stop"></i></button>
+                            <button id="send-btn" class="input-icon-btn send-btn" aria-label="Send message">
+                                <i class="fa-solid fa-arrow-up"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

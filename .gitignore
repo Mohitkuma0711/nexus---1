@@ -1,0 +1,23 @@
+# Node dependencies
+node_modules/
+back/node_modules/
+
+# Environment secrets
+.env
+*.env
+back/.env
+
+# Runtime data
+back/nexusai.db
+back/nexusai.db-*
+back/users.json
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS/editor
+.DS_Store
+.vscode/
+venv/
