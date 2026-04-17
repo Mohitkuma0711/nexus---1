@@ -677,3 +677,64 @@ h1, h2, h3, h4, .hero h1 {
 #message-input::placeholder {
     color: #A3A3A3;
 }
+
+/* Name Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(8px);
+}
+.modal-content {
+    background: var(--surface);
+    padding: 2.5rem;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    text-align: center;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+.modal-content h2 { 
+    margin-bottom: 0.5rem; 
+    color: var(--text-primary); 
+    font-size: 1.5rem;
+}
+.modal-content p { 
+    margin-bottom: 1.5rem; 
+    color: var(--text-secondary); 
+}
+.modal-content input {
+    width: 100%;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+    background: var(--bg-darker);
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+.modal-content input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+.modal-content button {
+    width: 100%;
+    padding: 1rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.modal-content button:hover {
+    opacity: 0.9;
+}

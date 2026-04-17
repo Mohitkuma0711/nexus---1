@@ -133,6 +133,14 @@ const messageInput = document.getElementById('message-input');
 const sendBtn = document.getElementById('send-btn');
 const rootConfig = document.documentElement;
 
+// User Profile Elements
+const nameModal = document.getElementById('name-modal');
+const nameInput = document.getElementById('name-input');
+const saveNameBtn = document.getElementById('save-name-btn');
+const sidebarAvatar = document.getElementById('sidebar-avatar');
+const sidebarUsername = document.getElementById('sidebar-username');
+const mainGreeting = document.getElementById('main-greeting');
+
 // Current state
 let currentMode = null;
 let isTyping = false;
@@ -142,11 +150,44 @@ let sentViaVoice = false;
 
 // Initialization
 function init() {
+    setupUserProfile();
     renderSidebarModes();
     setupEventListeners();
     // Default to first mode
     if (modes.length > 0) {
         openMode(modes[0].id);
+    }
+}
+
+function setupUserProfile() {
+    let savedName = localStorage.getItem('nexus-username');
+    
+    if (!savedName) {
+        // Show modal if no name
+        nameModal.style.display = 'flex';
+        
+        saveNameBtn.addEventListener('click', () => {
+            const enteredName = nameInput.value.trim();
+            if (enteredName) {
+                localStorage.setItem('nexus-username', enteredName);
+                nameModal.style.display = 'none';
+                updateUserUI(enteredName);
+            }
+        });
+        
+        nameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') saveNameBtn.click();
+        });
+    } else {
+        updateUserUI(savedName);
+    }
+}
+
+function updateUserUI(name) {
+    sidebarUsername.textContent = name;
+    sidebarAvatar.textContent = name.charAt(0).toUpperCase();
+    if (mainGreeting) {
+        mainGreeting.textContent = `How can I help, ${name}?`;
     }
 }
 
