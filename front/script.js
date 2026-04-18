@@ -141,6 +141,12 @@ const sidebarAvatar = document.getElementById('sidebar-avatar');
 const sidebarUsername = document.getElementById('sidebar-username');
 const mainGreeting = document.getElementById('main-greeting');
 
+// Cinema Elements
+const cinemaModal = document.getElementById('cinema-modal');
+const cinemaPlayerContainer = document.getElementById('cinema-player-container');
+const cinemaVideoTitle = document.getElementById('cinema-video-title');
+const closeCinemaBtn = document.getElementById('close-cinema-btn');
+
 // Current state
 let currentMode = null;
 let isTyping = false;
@@ -324,8 +330,7 @@ async function sendMessage() {
             body: JSON.stringify({
                 modeId: currentMode.id,
                 message: text,
-                history: chatHistory.slice(0, -1), // send history without the current message
-                username: localStorage.getItem('nexus-username') || 'Anonymous'
+                history: chatHistory.slice(0, -1) // send history without the current message
             })
         });
 
@@ -379,9 +384,25 @@ function addMessageBubble(content, sender, rawText = null) {
     
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    bubble.innerHTML = content;
     
+    let displayContent = content;
+    let youtubeQuery = null;
+
+    if (sender === 'ai') {
+        const youtubeRegex = /\[YOUTUBE:\s*(.*?)\]/i;
+        const match = content.match(youtubeRegex);
+        if (match) {
+            youtubeQuery = match[1].trim();
+            displayContent = content.replace(youtubeRegex, '').trim();
+        }
+    }
+
+    bubble.innerHTML = displayContent;
     msgDiv.appendChild(bubble);
+
+    if (youtubeQuery) {
+        msgDiv.appendChild(createVideoCard(youtubeQuery));
+    }
 
     if (sender === 'ai') {
         const actionsDiv = document.createElement('div');
@@ -437,6 +458,74 @@ function showTypingIndicator() {
 // Scroller helper
 function scrollToBottom() {
     chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function createVideoCard(query) {
+    const card = document.createElement('div');
+    card.className = 'video-recommendation-card';
+    
+    card.innerHTML = `
+        <div class="video-card-header">
+            <div class="yt-brand">
+                <i class="fa-brands fa-youtube" style="color: #ff0000; font-size: 1.2rem;"></i>
+                <span>YouTube Recommendation</span>
+            </div>
+            <div class="yt-badge">Smart Search</div>
+        </div>
+        <div class="video-card-body">
+            <h3>"${query}"</h3>
+            <p>Access the best educational tutorials and visual guides on this topic.</p>
+            <button class="watch-yt-btn" id="play-in-cinema-btn">
+                <i class="fa-solid fa-play"></i>
+                Play in Nexus Cinema
+            </button>
+        </div>
+    `;
+
+    // Add event listener to the button
+    const playBtn = card.querySelector('#play-in-cinema-btn');
+    playBtn.onclick = (e) => {
+        e.preventDefault();
+        openCinema(query);
+    };
+
+    return card;
+}
+
+// ── Cinema Logic ──────────────────────────────────────────────────
+async function openCinema(query) {
+    cinemaModal.style.display = 'flex';
+    cinemaVideoTitle.innerText = `Searching for: ${query}...`;
+    cinemaPlayerContainer.innerHTML = '<div class="typing-indicator" style="margin: 2rem auto;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+
+    try {
+        const response = await fetch(`/api/video-search?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+
+        if (data.videoId) {
+            cinemaVideoTitle.innerText = query;
+            cinemaPlayerContainer.innerHTML = `
+                <iframe 
+                    src="https://www.youtube.com/embed/${data.videoId}?autoplay=1" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            `;
+        } else {
+            cinemaVideoTitle.innerText = "Video Not Found";
+            cinemaPlayerContainer.innerHTML = `<div style="padding: 2rem; color: #ef4444; text-align: center;">Sorry, we couldn't find a video for this topic. Try a different query!</div>`;
+        }
+    } catch (err) {
+        console.error('Cinema Error:', err);
+        cinemaVideoTitle.innerText = "Error Loading Cinema";
+        cinemaPlayerContainer.innerHTML = `<div style="padding: 2rem; color: #ef4444; text-align: center;">Failed to connect to Nexus Cinema. Please check your connection.</div>`;
+    }
+}
+
+function closeCinema() {
+    cinemaModal.style.display = 'none';
+    cinemaPlayerContainer.innerHTML = ''; // Stops the video
 }
 
 // Auto-expand textarea (debounced to prevent layout thrashing)
@@ -495,6 +584,16 @@ function setupEventListeners() {
 
     // Microphone / Speech Recognition
     setupSpeechRecognition();
+
+    // Cinema listeners
+    if (closeCinemaBtn) {
+        closeCinemaBtn.addEventListener('click', closeCinema);
+    }
+    if (cinemaModal) {
+        cinemaModal.addEventListener('click', (e) => {
+            if (e.target === cinemaModal) closeCinema();
+        });
+    }
 }
 
 // ── Voice Conversation Mode ────────────────────────────────────────

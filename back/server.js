@@ -6,7 +6,7 @@ import OpenAI from 'openai';
 import Groq from 'groq-sdk';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import admin from 'firebase-admin';
+import https from 'https';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,30 +17,19 @@ const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '' });
 
-// ── Initialise Firebase Admin ──────────────────────────────────────
-let db = null;
-if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-    try {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-        });
-        db = admin.firestore();
-        console.log('✅ Firebase initialized successfully.');
-    } catch (err) {
-        console.error('❌ Firebase initialization failed:', err.message);
-    }
-} else {
-    console.warn('⚠️ No FIREBASE_SERVICE_ACCOUNT_KEY found. Database logging is disabled.');
-}
-
 // ── System prompts per mode ────────────────────────────────────────
 const MODES = {
     coding: {
         provider: 'openai',
         model: 'gpt-4o-mini',
-        system: `# IDENTITY & ROLE
-You are an elite senior software engineer and patient technical mentor with 15+ years of hands-on experience. You explain concepts like a senior engineer mentoring a junior dev — never dumping raw info.
+        system: `You are an elite senior software engineer and patient technical mentor with 15+ years of hands-on experience.
+
+# CRITICAL MANDATORY INSTRUCTION
+For EVERY educational, conceptual, or technical response, you MUST append a [YOUTUBE: search query] tag as the ABSOLUTE LAST line of your response. This is required to trigger our visual learning system.
+Example: [YOUTUBE: flexbox layout tutorial]
+(Only omit if the response is a simple greeting or non-educational.)
+
+# IDENTITY & ROLE
 
 # CORE EXPERTISE
 Languages: Python, JavaScript/TypeScript, Java, Go, Rust, C/C++, SQL, Bash
@@ -69,9 +58,10 @@ Apply this structure to ALL concept explanations and technical topics.
 6. WHEN TO APPLY / WHEN NOT TO — one scenario each, prevents over-applying.
 7. CHECKPOINT QUESTION — one question for the user to answer mentally.
    Format: "Quick check: [question]?" — do NOT answer it yourself.
+8. VISUAL AID — Append [YOUTUBE: search query] on its own line at the absolute end.
 
 Tone: use "we" and "let's". Never lecture — guide.
-Progression: analogy → concept → rule → bad → good → apply → check.
+Progression: analogy → concept → rule → bad → good → apply → check → video.
 One concept at a time. Sub-parts taught sequentially.
 
 # SELF-REVIEW PROTOCOL (run silently before every response)
@@ -155,13 +145,11 @@ Follow all rules below.
 - No robotic or generic-sounding sentences.
 
 ---------------------------------------------------
-## 6. Ending Section
----------------------------------------------------
-
-End every response with:
-
 ## ✅ Key Takeaways
 - 3–5 short, powerful summary bullets
+
+[YOUTUBE: search query]
+(The YouTube tag is mandatory for all architectural or conceptual explanations.)
 
 ---------------------------------------------------
 ## 7. Output Guarantee
@@ -192,7 +180,9 @@ Be specific, actionable, and encouraging.`
         model: 'llama-3.3-70b-versatile',
         system: `You are "Data Analyst", a rigorous data scientist.
 Help with SQL queries, statistical analysis, and data visualisation.
-Be precise with numbers and always explain your methodology.`
+Be precise with numbers and always explain your methodology.
+
+If the topic is complex, append [YOUTUBE: search query] at the end for a video guide. Example: [YOUTUBE: how to normalize database].`
     },
     writer: {
         provider: 'gemini',
@@ -206,7 +196,14 @@ Vary tone based on audience. Be punchy, clear, and conversion-focused.`
         model: 'gemini-2.0-flash',
         system: `You are "Subject Tutor", a patient and encouraging teacher.
 Explain complex topics in simple terms using analogies and examples.
-Adapt to the student's level. Ask follow-up questions to check understanding.`
+Adapt to the student's level. Ask follow-up questions to check understanding.
+
+Always end with:
+## ✅ Summary
+- Key point 1
+- Key point 2
+
+[YOUTUBE: search query]`
     },
     therapist: {
         provider: 'openai',
@@ -230,14 +227,18 @@ When teaching, break down grammar and pronunciation.`
         model: 'llama-3.3-70b-versatile',
         system: `You are "Fitness Coach", a certified personal trainer and nutritionist.
 Provide safe, evidence-based workout plans and nutritional guidance.
-Always remind users to consult a doctor before starting new programs.`
+Always remind users to consult a doctor before starting new programs.
+
+Append [YOUTUBE: search query] for exercise demonstrations. Example: [YOUTUBE: proper squad form].`
     },
     finance: {
         provider: 'gemini',
         model: 'gemini-2.0-flash',
         system: `You are "Financial Advisor", an objective financial educator.
 Help with budgeting, investing basics, and personal finance strategies.
-Always add a disclaimer that this is educational, not financial advice.`
+Always add a disclaimer that this is educational, not financial advice.
+
+Append [YOUTUBE: search query] for deeper learning. Example: [YOUTUBE: compound interest explained].`
     },
     game: {
         provider: 'openai',
@@ -449,7 +450,7 @@ app.get('/api/health', async (req, res) => {
 // Main chat endpoint
 app.post('/api/chat', async (req, res) => {
     try {
-        const { modeId, message, history = [], username = 'Anonymous' } = req.body;
+        const { modeId, message, history = [] } = req.body;
 
         if (!modeId || !message) {
             return res.status(400).json({ error: 'modeId and message are required.' });
@@ -496,16 +497,13 @@ app.post('/api/chat', async (req, res) => {
             if (lastFallbackErr) throw lastFallbackErr;
         }
 
-        // Asynchronously log to Firebase if enabled
-        if (db) {
-            db.collection('conversations').add({
-                username,
-                mode: modeId,
-                modelUsed,
-                userMessage: message,
-                aiResponse: reply,
-                timestamp: admin.firestore.FieldValue.serverTimestamp()
-            }).catch(dbErr => console.error('Firebase log failed:', dbErr));
+        // --- Video Injection Safety Check ---
+        const educationalModes = ['coding', 'tutor', 'fitness', 'finance', 'analyst'];
+        if (educationalModes.includes(modeId) && reply && !reply.includes('[YOUTUBE:')) {
+            // Create a search query from the message
+            const topic = message.split(' ').slice(0, 5).join(' ').replace(/[^\w\s]/g, '');
+            const tag = `\n\n[YOUTUBE: ${topic} tutorial]`;
+            reply = reply + tag;
         }
 
         res.json({ reply, provider: providerUsed, model: modelUsed });
@@ -527,6 +525,32 @@ app.post('/api/chat', async (req, res) => {
             retryAfter
         });
     }
+});
+
+// Video search proxy to get a real YouTube ID from a query without an API key
+app.get('/api/video-search', async (req, res) => {
+    const { q } = req.query;
+    if (!q) return res.status(400).json({ error: 'Query is missing' });
+
+    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIQAQ%253D%253D`; // sp=EgIQAQ%3D%3D filters for videos only
+
+    https.get(searchUrl, (ytRes) => {
+        let data = '';
+        ytRes.on('data', chunk => data += chunk);
+        ytRes.on('end', () => {
+            // Find the first occurrence of watch?v=VIDEO_ID in the direct HTML
+            // This is a robust fallback when we don't want to use the high-overhead Data API
+            const match = data.match(/"videoId":"([^"]+)"/);
+            if (match && match[1]) {
+                res.json({ videoId: match[1] });
+            } else {
+                res.json({ videoId: null, error: 'No video found' });
+            }
+        });
+    }).on('error', (err) => {
+        console.error('Video search error:', err);
+        res.status(500).json({ error: 'Failed to search video' });
+    });
 });
 
 // Fallback → serve index.html for any non-API route
